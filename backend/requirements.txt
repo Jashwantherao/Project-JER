@@ -1,0 +1,17 @@
+# Backend requirements for Multimodal Deepfake Detection Agent
+
+google-cloud-storage
+flask
+requests
+Pillow
+resampy
+librosa
+soundfile
+numpy
+# For Hugging Face API
+transformers
+# For audio deepfake detection
+resemblyzer
+torch
+# For Google Agent Development Kit (if Python SDK is used)
+google-agent-sdk

@@ -1,0 +1,6 @@
+# Google Cloud IAM permissions for Deepfake Detection Agent
+# Grant access to Cloud Storage and Cloud Functions/Run
+
+- roles/storage.objectAdmin  # Full access to objects in GCS bucket
+- roles/cloudfunctions.invoker  # Allow invoking Cloud Functions
+- roles/run.invoker  # Allow invoking Cloud Run services

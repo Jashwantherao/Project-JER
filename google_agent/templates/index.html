@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google ADK Deepfake Detection - Local Mode</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .header { background: #4285f4; color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: center; }
+        .chat-container { background: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .messages { height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 5px; }
+        .message { margin-bottom: 15px; }
+        .user-message { text-align: right; }
+        .agent-message { text-align: left; }
+        .message-content { display: inline-block; max-width: 70%; padding: 10px; border-radius: 10px; }
+        .user-message .message-content { background: #4285f4; color: white; }
+        .agent-message .message-content { background: #e8f0fe; color: #333; }
+        .input-section { display: flex; gap: 10px; margin-bottom: 10px; }
+        .input-section input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        .input-section button { padding: 10px 20px; background: #4285f4; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .input-section button:hover { background: #3367d6; }
+        .file-section { margin-bottom: 15px; }
+        .file-input { margin-bottom: 10px; }
+        .detection-section { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .result { margin-top: 15px; padding: 15px; border-radius: 5px; background: #e8f5e8; border-left: 4px solid #34a853; }
+        .result.real { background: #e8f5e8; border-left: 4px solid #34a853; }
+        .result.fake { background: #fce8e6; border-left: 4px solid #ea4335; }
+        .error { background: #fce8e6; border-left: 4px solid #ea4335; }
+        .status { text-align: center; margin-bottom: 20px; padding: 10px; border-radius: 5px; }
+        .status.healthy { background: #e8f5e8; color: #137333; }
+        .status.error { background: #fce8e6; color: #d93025; }
+        .cost-badge { background: #34a853; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; margin-left: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Google ADK Deepfake Detection</h1>
+            <p>Local Processing Mode <span class="cost-badge">💰 No Cloud Charges</span></p>
+        </div>
+        
+        <div id="status" class="status">Checking system status...</div>
+        
+        <div class="chat-container">
+            <h2>💬 Chat with Agent</h2>
+            <div id="messages" class="messages">
+                <div class="message agent-message">
+                    <div class="message-content">
+                        Hello! I'm your deepfake detection assistant running in local mode. I can analyze images and audio files for signs of AI generation. How can I help you today?
+                    </div>
+                </div>
+            </div>
+            
+            <div class="file-section">
+                <div class="file-input">
+                    <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.wav,.mp3,.flac">
+                    <label for="fileInput">📎 Attach image or audio file</label>
+                </div>
+            </div>
+            
+            <div class="input-section">
+                <input type="text" id="messageInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+        
+        <div class="detection-section">
+            <h2>🔍 Direct File Detection</h2>
+            <p>Upload a file for immediate analysis without conversation:</p>
+            <div style="margin-top: 15px;">
+                <input type="file" id="detectFileInput" accept=".jpg,.jpeg,.png,.wav,.mp3,.flac">
+                <button onclick="detectFile()" style="margin-left: 10px;">Analyze File</button>
+            </div>
+            <div id="detectionResult"></div>
+        </div>
+    </div>
+    
+    <script>
+        let sessionId = 'local-session-' + Date.now();
+        
+        checkHealth();
+        
+        function checkHealth() {
+            fetch('/api/health')
+                .then(response => response.json())
+                .then(data => {
+                    const statusEl = document.getElementById('status');
+                    if (data.status === 'healthy') {
+                        statusEl.textContent = `✅ Local mode active - ${data.message}`;
+                        statusEl.className = 'status healthy';
+                    } else {
+                        statusEl.textContent = '❌ System error';
+                        statusEl.className = 'status error';
+                    }
+                })
+                .catch(() => {
+                    const statusEl = document.getElementById('status');
+                    statusEl.textContent = '❌ Cannot connect to service';
+                    statusEl.className = 'status error';
+                });
+        }
+        
+        function addMessage(content, isUser) {
+            const messagesEl = document.getElementById('messages');
+            const messageEl = document.createElement('div');
+            messageEl.className = `message ${isUser ? 'user-message' : 'agent-message'}`;
+            messageEl.innerHTML = `<div class="message-content">${content}</div>`;
+            messagesEl.appendChild(messageEl);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+        
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const fileInput = document.getElementById('fileInput');
+            const message = messageInput.value.trim();
+            
+            if (!message && !fileInput.files[0]) return;
+            
+            let displayMessage = message || 'Uploaded file for analysis';
+            if (fileInput.files[0]) {
+                displayMessage += ` 📎 ${fileInput.files[0].name}`;
+            }
+            addMessage(displayMessage, true);
+            
+            const payload = {
+                message: message || 'Analyze this file',
+                session_id: sessionId
+            };
+            
+            if (fileInput.files[0]) {
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    payload.file_data = e.target.result.split(',')[1];
+                    payload.filename = file.name;
+                    sendToAgent(payload);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                sendToAgent(payload);
+            }
+            
+            messageInput.value = '';
+            fileInput.value = '';
+        }
+        
+        function sendToAgent(payload) {
+            fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    addMessage(`❌ Error: ${data.error}`, false);
+                } else {
+                    let response = data.response || 'No response';
+                    
+                    if (data.detection_result) {
+                        const detection = data.detection_result;
+                        const detectionType = detection.result || 'Unknown';
+                        const confidence = detection.confidence || 0;
+                        
+                        response += `<br><br>📊 <strong>Detection Result:</strong><br>`;
+                        response += `🎯 <strong>Result:</strong> ${detectionType}<br>`;
+                        response += `📈 <strong>Confidence:</strong> ${(confidence * 100).toFixed(1)}%`;
+                    }
+                    
+                    if (data.intent && data.confidence) {
+                        response += `<br><small>📍 Intent: ${data.intent} (${(data.confidence * 100).toFixed(1)}%)</small>`;
+                    }
+                    addMessage(response, false);
+                }
+            })
+            .catch(error => {
+                addMessage(`❌ Connection error: ${error}`, false);
+            });
+        }
+        
+        function detectFile() {
+            const fileInput = document.getElementById('detectFileInput');
+            const resultEl = document.getElementById('detectionResult');
+            
+            if (!fileInput.files[0]) {
+                resultEl.innerHTML = '<div class="result error">Please select a file first.</div>';
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            resultEl.innerHTML = '<div class="result">🔍 Analyzing file...</div>';
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const payload = {
+                    file_data: e.target.result.split(',')[1],
+                    filename: file.name
+                };
+                
+                fetch('/api/detect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        resultEl.innerHTML = `<div class="result error">❌ Error: ${data.error}</div>`;
+                    } else {
+                        const detection = data.detection_result || data;
+                        const detectionType = detection.result || detection.detection_type || 'Unknown';
+                        const confidence = detection.confidence || data.confidence || 0;
+                        const explanation = data.response || detection.explanation || 'Analysis completed';
+                        
+                        let typeDisplay = detectionType;
+                        let typeClass = '';
+                        if (detectionType.toLowerCase().includes('real') || detectionType.toLowerCase().includes('authentic')) {
+                            typeDisplay = '✅ Real/Authentic';
+                            typeClass = 'real';
+                        } else if (detectionType.toLowerCase().includes('fake') || detectionType.toLowerCase().includes('synthetic')) {
+                            typeDisplay = '🚨 Fake/Synthetic';
+                            typeClass = 'fake';
+                        } else if (detectionType !== 'Unknown') {
+                            typeDisplay = `🔍 ${detectionType}`;
+                        }
+                        
+                        resultEl.innerHTML = `
+                            <div class="result ${typeClass}">
+                                <h3>📊 Detection Results</h3>
+                                <p><strong>File:</strong> ${file.name}</p>
+                                <p><strong>Result:</strong> ${typeDisplay}</p>
+                                <p><strong>Confidence:</strong> ${(confidence * 100).toFixed(1)}%</p>
+                                <p><strong>Analysis:</strong> ${explanation}</p>
+                                ${data.intent ? `<p><small>📍 Intent: ${data.intent}</small></p>` : ''}
+                                <p><small>💻 Processed locally - no cloud charges</small></p>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    resultEl.innerHTML = `<div class="result error">❌ Connection error: ${error}</div>`;
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+</html>

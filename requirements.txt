@@ -1,0 +1,33 @@
+# Multimodal Deepfake Detection Agent with Dialogflow CX
+# Backend API dependencies
+flask==3.0.3
+requests==2.31.0
+gunicorn==21.2.0
+
+# Google Cloud and Dialogflow CX
+google-cloud-dialogflow-cx==1.42.0
+google-auth==2.29.0
+google-cloud-storage==2.16.0
+google-api-core==2.19.0
+
+# Machine Learning libraries
+transformers==4.41.0
+torch==2.3.0
+torchvision==0.18.0
+numpy==1.24.4
+
+# Image processing
+Pillow==10.3.0
+
+# Audio processing
+librosa==0.10.2
+soundfile==0.12.1
+scipy==1.13.0
+
+# Development and testing
+pytest==8.2.0
+black==24.4.0
+
+# Utility libraries
+python-dotenv==1.0.1
+werkzeug==3.0.3

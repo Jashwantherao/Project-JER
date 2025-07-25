@@ -1,0 +1,7 @@
+# Deployment configuration for Cloud Function/Cloud Run
+# Example: main.py as entrypoint, Python 3.10 runtime
+runtime: python310
+entrypoint: python main.py
+# Set environment variables
+env_variables:
+  GCS_BUCKET: your-bucket-name
