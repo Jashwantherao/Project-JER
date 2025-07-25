@@ -1,7 +1,7 @@
 # Google Cloud deployment script for Dialogflow CX Deepfake Detection (PowerShell)
 
 # Configuration
-$PROJECT_ID = "project-jer-467014"
+$PROJECT_ID = ""
 $REGION = "us-central1"
 $SERVICE_NAME = "deepfake-detection-webhook"
 $IMAGE_NAME = "deepfake-detection"
